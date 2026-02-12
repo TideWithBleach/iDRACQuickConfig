@@ -22,7 +22,7 @@
     }
     .row { display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; }
     .btnbar { display:flex; gap:0.5rem; flex-wrap:wrap; }
-    button { background:#0a1222; border:1px solid var(--border); border-radius:8px; color:var(--fg); padding:0.55rem 0.8rem; cursor:pointer; }
+    button { background:#0a1222; border:1px solid var(--border); border-radius:8px; color:#fff; padding:0.55rem 0.8rem; cursor:pointer; }
     button.primary { background:var(--accent); color:#06131b; border-color:#0ea5e9; }
     button.good { background:var(--good); color:#062612; border-color:#16a34a; }
     pre { margin:0; white-space:pre; overflow:auto; max-height:520px; background:#071020; border:1px solid var(--border); border-radius:8px; padding:1rem; }
@@ -32,7 +32,7 @@
 
     /* === Validation UI === */
     .error { color:#fca5a5; font-size:0.85rem; display:none; }
-    input.invalid { border-color:#f87171; box-shadow:0 0 0 1px #f87171 inset; }
+    input.invalid, select.invalid { border-color:#f87171; box-shadow:0 0 0 1px #f87171 inset; }
     .error.show { display:block; }
   </style>
 </head>
@@ -64,8 +64,8 @@
           <span class="error" id="err-ip">Enter a valid IPv4 address (e.g., 192.168.1.10).</span>
         </label>
         <label>Hostname
-          <input id="hostname" type="text" placeholder="e.g., USFLWDRE1ASHM01" value="USFLWDRE1ASHM01" />
-          <span class="error" id="err-hostname"></span>
+          <input id="hostname" type="text" placeholder="e.g., USFLWDRE1ASHM01" value="USFLWDRE1ASHM01" data-validate="hostname" />
+          <span class="error" id="err-hostname">Hostname must be RFC‑1123 compliant (a–z, 0–9, hyphens; 1–63 chars per label; no leading/trailing hyphen).</span>
         </label>
         <label>iDRAC static IP
           <input id="idracip" type="text" placeholder="e.g., 10.184.52.51" value="10.184.52.51" data-validate="ipv4" />
@@ -95,9 +95,20 @@
           <input id="idracntp2" type="text" placeholder="e.g., 10.110.93.254" value="10.110.93.254" data-validate="ipv4" data-optional="true" />
           <span class="error" id="err-idracntp2">Enter a valid IPv4 NTP server (or leave blank).</span>
         </label>
+
         <label>Timezone
-          <input id="timezone" type="text" placeholder="e.g., EST5EDT" value="EST5EDT" />
-          <span class="error" id="err-timezone"></span>
+          <select id="timezoneSelect" data-validate="timezone">
+            <option value="EST5EDT" selected>US/Eastern — EST5EDT</option>
+            <option value="CST6CDT">US/Central — CST6CDT</option>
+            <option value="MST7MDT">US/Mountain — MST7MDT</option>
+            <option value="MST7">US/Arizona (no DST) — MST7</option>
+            <option value="PST8PDT">US/Pacific — PST8PDT</option>
+            <option value="UTC">UTC</option>
+            <option value="GMT0">GMT — GMT0</option>
+            <option value="Other">Other (custom POSIX)</option>
+          </select>
+          <input id="timezoneCustom" type="text" placeholder="Custom POSIX TZ (e.g., CET-1CEST,M3.5.0/2,M10.5.0/3)" style="display:none;" />
+          <span class="error" id="err-timezone">Pick a timezone or enter a valid POSIX TZ string.</span>
         </label>
       </div>
 
@@ -134,8 +145,8 @@
   const psq = s => `'${String(s ?? "").replace(/'/g, "''")}'`; // PowerShell single-quote safe
   const $ = id => document.getElementById(id);
 
-  function v(id) { return $(id).value.trim(); }
-  function b(id) { return $(id).checked; }
+  const v = id => $(id).value.trim();
+  const b = id => $(id).checked;
 
   // ========= Validation =========
   const IPV4_RE =
@@ -151,43 +162,82 @@
     "255.255.255.248","255.255.255.252"
   ]);
 
-  function isValidIPv4(s) {
-    return IPV4_RE.test(s);
+  function isValidIPv4(s) { return IPV4_RE.test(s); }
+  function isValidNetmask(s) { return VALID_NETMASKS.has(s); }
+
+  // RFC‑1035/1123 hostname check
+  function isValidHostname(name) {
+    if (!name || name.length > 253) return false;
+    const labels = name.split(".");
+    for (const label of labels) {
+      if (label.length < 1 || label.length > 63) return false;
+      // must start/end alphanumeric; hyphens allowed inside
+      if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/.test(label)) return false;
+    }
+    return true;
   }
-  function isValidNetmask(s) {
-    return VALID_NETMASKS.has(s);
+
+  // Permissive POSIX TZ token check (for custom)
+  function isValidPosixTz(s) {
+    // Basic sanity: starts with a letter; allow letters, digits, + - : _ . , / ; no spaces
+    return /^[A-Za-z][A-Za-z0-9+\-:_.,/]{0,63}$/.test(s);
+  }
+
+  function setFieldState(el, valid, errEl) {
+    el.classList.toggle("invalid", !valid);
+    el.setAttribute("aria-invalid", String(!valid));
+    if (errEl) errEl.classList.toggle("show", !valid);
   }
 
   function validateField(input) {
     const type = input.dataset.validate;
     const optional = input.dataset.optional === "true";
     const value = input.value.trim();
-
     let valid = true;
+
     if (type === "ipv4") {
       valid = optional && value === "" ? true : isValidIPv4(value);
     } else if (type === "netmask") {
       valid = isValidNetmask(value);
+    } else if (type === "hostname") {
+      valid = isValidHostname(value);
+    } else if (type === "timezone") {
+      valid = validateTimezone(); // handles its own UI state
+      return valid;
     }
 
-    // Visual feedback
-    input.classList.toggle("invalid", !valid);
-    input.setAttribute("aria-invalid", String(!valid));
-    const err = input.nextElementSibling;
-    if (err && err.classList.contains("error")) {
-      err.classList.toggle("show", !valid);
+    const err = input.nextElementSibling && input.nextElementSibling.classList.contains("error")
+      ? input.nextElementSibling
+      : null;
+    setFieldState(input, valid, err);
+    return valid;
+  }
+
+  function validateTimezone() {
+    const sel = $("timezoneSelect");
+    const custom = $("timezoneCustom");
+    const err = $("err-timezone");
+    let valid = true;
+
+    if (sel.value === "Other") {
+      const val = custom.value.trim();
+      valid = isValidPosixTz(val);
+      setFieldState(custom, valid, err);
+      setFieldState(sel, valid, null); // highlight both on error
+    } else {
+      setFieldState(sel, true, null);
+      setFieldState(custom, true, err);
     }
     return valid;
   }
 
   function validateAll() {
-    const inputs = document.querySelectorAll('input[data-validate]');
+    const inputs = document.querySelectorAll('input[data-validate], select[data-validate]');
     let allValid = true;
     inputs.forEach(inp => {
       const ok = validateField(inp);
       if (!ok) allValid = false;
     });
-    // Disable actions if invalid
     $("btnCopy").disabled = !allValid;
     $("btnDownload").disabled = !allValid;
     $("validationHint").style.display = allValid ? "none" : "block";
@@ -195,6 +245,11 @@
   }
 
   // ========= Script builder =========
+  function currentTimezoneValue() {
+    const sel = $("timezoneSelect").value;
+    return sel === "Other" ? v("timezoneCustom") || "EST5EDT" : sel;
+  }
+
   function buildScript() {
     const u = v('u');
     const p = v('p');
@@ -207,7 +262,7 @@
     const idracdns2 = v('idracdns2');
     const idracntp1 = v('idracntp1');
     const idracntp2 = v('idracntp2');
-    const timezone = v('timezone');
+    const timezone = currentTimezoneValue();
     const promptPwd = b('promptPwd');
 
     const header = [
@@ -220,13 +275,11 @@
       ""
     ];
 
-    // Build credentials section
     const credLines = [];
     credLines.push(`$u = ${psq(u || 'root')}`);
     if (promptPwd) {
       credLines.push(
         `$secureP = Read-Host "Enter iDRAC password for $u" -AsSecureString`,
-        // Convert to plain text just-in-time for racadm (racadm needs clear text; dispose immediately after use)
         `$p = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureP))`
       );
     } else {
@@ -244,7 +297,6 @@
     credLines.push(`$timezone = ${psq(timezone || 'EST5EDT')}`);
     credLines.push("");
 
-    // Command helper (kept as simple pushes for clarity)
     const body = [];
     body.push(`# Disable default credential warning`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.Tuning.DefaultCredentialWarning 0`);
@@ -275,32 +327,22 @@
     body.push(`# Show final IPv4 config`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p get idrac.ipv4`);
 
-    if (b('promptPwd')) {
-      // Best-effort cleanup of plaintext conversion
-      body.push(
-        ``,
-        `# Cleanup plaintext password variable`,
-        `Remove-Variable -Name p -ErrorAction SilentlyContinue`
-      );
+    if (promptPwd) {
+      body.push(``, `# Cleanup plaintext password variable`, `Remove-Variable -Name p -ErrorAction SilentlyContinue`);
     }
 
-    const script = [...header, ...credLines, ...body, ""].join("\n");
-    return script;
+    return [...header, ...credLines, ...body, ""].join("\n");
   }
 
   // ========= UI glue =========
   function updatePreview() {
-    // Run validation first to set button states and messages
     validateAll();
-
     const script = buildScript();
-    const preview = $('preview');
-    preview.textContent = script;
+    $("preview").textContent = script;
 
-    // Keep buttons disabled if script is suspiciously short
     const tooShort = script.trim().length < 10;
-    $('btnCopy').disabled = $('btnCopy').disabled || tooShort;
-    $('btnDownload').disabled = $('btnDownload').disabled || tooShort;
+    $("btnCopy").disabled = $("btnCopy").disabled || tooShort;
+    $("btnDownload").disabled = $("btnDownload").disabled || tooShort;
   }
 
   function downloadPs1() {
@@ -325,19 +367,28 @@
   }
 
   // Wire up
-  $('btnPreview').addEventListener('click', updatePreview);
-  $('btnDownload').addEventListener('click', downloadPs1);
-  $('btnCopy').addEventListener('click', copyToClipboard);
+  $("btnPreview").addEventListener("click", updatePreview);
+  $("btnDownload").addEventListener("click", downloadPs1);
+  $("btnCopy").addEventListener("click", copyToClipboard);
 
   // Real-time validation & live preview updates
-  document.querySelectorAll('input').forEach(el => {
-    el.addEventListener('input', e => {
-      if (e.target.matches('input[data-validate]')) {
-        validateField(e.target);
-      }
+  document.querySelectorAll("input").forEach(el => {
+    el.addEventListener("input", e => {
+      if (e.target.matches('input[data-validate]')) validateField(e.target);
       updatePreview();
     });
   });
+  document.querySelectorAll("select").forEach(el => {
+    el.addEventListener("change", e => {
+      if (e.target.id === "timezoneSelect") {
+        const custom = $("timezoneCustom");
+        custom.style.display = e.target.value === "Other" ? "" : "none";
+      }
+      if (e.target.matches('select[data-validate]')) validateField(e.target);
+      updatePreview();
+    });
+  });
+  $("timezoneCustom").addEventListener("input", () => { validateTimezone(); updatePreview(); });
 
   // Initial render
   updatePreview();
