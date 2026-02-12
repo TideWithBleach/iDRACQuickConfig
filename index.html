@@ -83,18 +83,28 @@
           <input id="idracdns1" type="text" placeholder="e.g., 10.110.30.216" value="10.110.30.216" data-validate="ipv4" />
           <span class="error" id="err-idracdns1">Enter a valid IPv4 DNS server.</span>
         </label>
-        <label>DNS2
-          <input id="idracdns2" type="text" placeholder="e.g., 10.110.93.254" value="10.110.93.254" data-validate="ipv4" data-optional="true" />
-          <span class="error" id="err-idracdns2">Enter a valid IPv4 DNS server (or leave blank).</span>
-        </label>
+
+<!-- DNS2 (optional) -->
+<label>DNS2
+  <input id="idracdns2" type="text" placeholder="e.g., 10.110.93.254"
+         value=""
+         data-validate="ipv4" data-optional="true" />
+  <span class="error" id="err-idracdns2">Enter a valid IPv4 DNS server (or leave blank).</span>
+</label>
+
         <label>NTP1
           <input id="idracntp1" type="text" placeholder="e.g., 10.110.30.216" value="10.110.30.216" data-validate="ipv4" />
           <span class="error" id="err-idracntp1">Enter a valid IPv4 NTP server.</span>
         </label>
-        <label>NTP2
-          <input id="idracntp2" type="text" placeholder="e.g., 10.110.93.254" value="10.110.93.254" data-validate="ipv4" data-optional="true" />
-          <span class="error" id="err-idracntp2">Enter a valid IPv4 NTP server (or leave blank).</span>
-        </label>
+
+<!-- NTP2 (optional) -->
+<label>NTP2
+  <input id="idracntp2" type="text" placeholder="e.g., 10.110.93.254"
+         value=""
+         data-validate="ipv4" data-optional="true" />
+  <span class="error" id="err-idracntp2">Enter a valid IPv4 NTP server (or leave blank).</span>
+</label>
+
 
         <label>Timezone
           <select id="timezoneSelect" data-validate="timezone">
