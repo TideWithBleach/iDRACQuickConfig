@@ -29,6 +29,11 @@
     .hint { color:var(--muted); font-size:0.9rem; }
     .pill { display:inline-block; background:#0a1222; border:1px solid var(--border); border-radius:999px; padding:0.2rem 0.5rem; margin-left:0.5rem; font-size:0.8rem; color:var(--muted); }
     .warning { background:#1f2937; border-left:4px solid #f59e0b; padding:0.75rem; border-radius:6px; color:#fde68a; }
+
+    /* === Validation UI === */
+    .error { color:#fca5a5; font-size:0.85rem; display:none; }
+    input.invalid { border-color:#f87171; box-shadow:0 0 0 1px #f87171 inset; }
+    .error.show { display:block; }
   </style>
 </head>
 <body>
@@ -46,41 +51,53 @@
       </div>
 
       <div class="grid" style="margin-top:0.75rem">
-  <label>iDRAC username
-    <input id="u" type="text" placeholder="e.g., root" value="root" />
-  </label>
-  <label>iDRAC password
-    <input id="p" type="password" placeholder="e.g., calvin" value="calvin" />
-  </label>
-  <label>Temporary iDRAC connection IP
-    <input id="ip" type="text" placeholder="e.g., 169.254.0.3" value="169.254.0.3" />
-  </label>
-  <label>Hostname
-    <input id="hostname" type="text" placeholder="e.g., USFLWDRE1ASHM01" value="USFLWDRE1ASHM01" />
-  </label>
-  <label>iDRAC static IP
-    <input id="idracip" type="text" placeholder="e.g., 10.184.52.51" value="10.184.52.51" />
-  </label>
-  <label>iDRAC gateway
-    <input id="idracgw" type="text" placeholder="e.g., 10.184.52.1" value="10.184.52.1" />
-  </label>
-  <label>iDRAC netmask
-    <input id="idracmask" type="text" placeholder="e.g., 255.255.255.0" value="255.255.255.0" />
-  </label>
-  <label>DNS1
-    <input id="idracdns1" type="text" placeholder="e.g., 10.110.30.216" value="10.110.30.216" />
-  </label>
-  <label>DNS2
-    <input id="idracdns2" type="text" placeholder="e.g., 10.110.93.254" value="10.110.93.254" />
-  </label>
-  <label>NTP1
-    <input id="idracntp1" type="text" placeholder="e.g., 10.110.30.216" value="10.110.30.216" />
-  </label>
-  <label>NTP2
-    <input id="idracntp2" type="text" placeholder="e.g., 10.110.93.254" value="10.110.93.254" />
-  </label>
-  <label>Timezone
-    <input id="timezone" type="text" placeholder="e.g., EST5EDT" value="EST5EDT" />
+        <label>iDRAC authentication username
+          <input id="u" type="text" placeholder="e.g., root" value="root" />
+          <span class="error" id="err-u"></span>
+        </label>
+        <label>iDRAC authentication password
+          <input id="p" type="password" placeholder="e.g., calvin" value="calvin" />
+          <span class="error" id="err-p"></span>
+        </label>
+        <label>Temporary iDRAC connection IP
+          <input id="ip" type="text" placeholder="e.g., 169.254.0.3" value="169.254.0.3" data-validate="ipv4" />
+          <span class="error" id="err-ip">Enter a valid IPv4 address (e.g., 192.168.1.10).</span>
+        </label>
+        <label>Hostname
+          <input id="hostname" type="text" placeholder="e.g., USFLWDRE1ASHM01" value="USFLWDRE1ASHM01" />
+          <span class="error" id="err-hostname"></span>
+        </label>
+        <label>iDRAC static IP
+          <input id="idracip" type="text" placeholder="e.g., 10.184.52.51" value="10.184.52.51" data-validate="ipv4" />
+          <span class="error" id="err-idracip">Enter a valid IPv4 address.</span>
+        </label>
+        <label>iDRAC gateway
+          <input id="idracgw" type="text" placeholder="e.g., 10.184.52.1" value="10.184.52.1" data-validate="ipv4" />
+          <span class="error" id="err-idracgw">Enter a valid IPv4 gateway.</span>
+        </label>
+        <label>iDRAC netmask
+          <input id="idracmask" type="text" placeholder="e.g., 255.255.255.0" value="255.255.255.0" data-validate="netmask" />
+          <span class="error" id="err-idracmask">Enter a valid subnet mask (e.g., 255.255.255.0).</span>
+        </label>
+        <label>DNS1
+          <input id="idracdns1" type="text" placeholder="e.g., 10.110.30.216" value="10.110.30.216" data-validate="ipv4" />
+          <span class="error" id="err-idracdns1">Enter a valid IPv4 DNS server.</span>
+        </label>
+        <label>DNS2
+          <input id="idracdns2" type="text" placeholder="e.g., 10.110.93.254" value="10.110.93.254" data-validate="ipv4" data-optional="true" />
+          <span class="error" id="err-idracdns2">Enter a valid IPv4 DNS server (or leave blank).</span>
+        </label>
+        <label>NTP1
+          <input id="idracntp1" type="text" placeholder="e.g., 10.110.30.216" value="10.110.30.216" data-validate="ipv4" />
+          <span class="error" id="err-idracntp1">Enter a valid IPv4 NTP server.</span>
+        </label>
+        <label>NTP2
+          <input id="idracntp2" type="text" placeholder="e.g., 10.110.93.254" value="10.110.93.254" data-validate="ipv4" data-optional="true" />
+          <span class="error" id="err-idracntp2">Enter a valid IPv4 NTP server (or leave blank).</span>
+        </label>
+        <label>Timezone
+          <input id="timezone" type="text" placeholder="e.g., EST5EDT" value="EST5EDT" />
+          <span class="error" id="err-timezone"></span>
         </label>
       </div>
 
@@ -96,6 +113,9 @@
         <button id="btnCopy" disabled>Copy</button>
         <button class="good" id="btnDownload" disabled>Download .ps1</button>
       </div>
+      <p class="hint" id="validationHint" style="margin-top:0.5rem; display:none; color:#fca5a5;">
+        Please fix the highlighted fields to enable Copy/Download.
+      </p>
     </div>
   </section>
 
@@ -109,13 +129,72 @@
 </main>
 
 <script>
-  // Utilities
+  // ========= Utilities =========
   const CRLF = s => s.replace(/\r?\n/g, "\r\n");
   const psq = s => `'${String(s ?? "").replace(/'/g, "''")}'`; // PowerShell single-quote safe
+  const $ = id => document.getElementById(id);
 
-  function v(id) { return document.getElementById(id).value.trim(); }
-  function b(id) { return document.getElementById(id).checked; }
+  function v(id) { return $(id).value.trim(); }
+  function b(id) { return $(id).checked; }
 
+  // ========= Validation =========
+  const IPV4_RE =
+    /^(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$/;
+
+  // Common subnet masks (CIDR /1 through /30)
+  const VALID_NETMASKS = new Set([
+    "128.0.0.0","192.0.0.0","224.0.0.0","240.0.0.0","248.0.0.0","252.0.0.0","254.0.0.0",
+    "255.0.0.0","255.128.0.0","255.192.0.0","255.224.0.0","255.240.0.0","255.248.0.0",
+    "255.252.0.0","255.254.0.0","255.255.0.0","255.255.128.0","255.255.192.0","255.255.224.0",
+    "255.255.240.0","255.255.248.0","255.255.252.0","255.255.254.0","255.255.255.0",
+    "255.255.255.128","255.255.255.192","255.255.255.224","255.255.255.240",
+    "255.255.255.248","255.255.255.252"
+  ]);
+
+  function isValidIPv4(s) {
+    return IPV4_RE.test(s);
+  }
+  function isValidNetmask(s) {
+    return VALID_NETMASKS.has(s);
+  }
+
+  function validateField(input) {
+    const type = input.dataset.validate;
+    const optional = input.dataset.optional === "true";
+    const value = input.value.trim();
+
+    let valid = true;
+    if (type === "ipv4") {
+      valid = optional && value === "" ? true : isValidIPv4(value);
+    } else if (type === "netmask") {
+      valid = isValidNetmask(value);
+    }
+
+    // Visual feedback
+    input.classList.toggle("invalid", !valid);
+    input.setAttribute("aria-invalid", String(!valid));
+    const err = input.nextElementSibling;
+    if (err && err.classList.contains("error")) {
+      err.classList.toggle("show", !valid);
+    }
+    return valid;
+  }
+
+  function validateAll() {
+    const inputs = document.querySelectorAll('input[data-validate]');
+    let allValid = true;
+    inputs.forEach(inp => {
+      const ok = validateField(inp);
+      if (!ok) allValid = false;
+    });
+    // Disable actions if invalid
+    $("btnCopy").disabled = !allValid;
+    $("btnDownload").disabled = !allValid;
+    $("validationHint").style.display = allValid ? "none" : "block";
+    return allValid;
+  }
+
+  // ========= Script builder =========
   function buildScript() {
     const u = v('u');
     const p = v('p');
@@ -165,7 +244,7 @@
     credLines.push(`$timezone = ${psq(timezone || 'EST5EDT')}`);
     credLines.push("");
 
-    // Command helper
+    // Command helper (kept as simple pushes for clarity)
     const body = [];
     body.push(`# Disable default credential warning`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.Tuning.DefaultCredentialWarning 0`);
@@ -196,7 +275,7 @@
     body.push(`# Show final IPv4 config`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p get idrac.ipv4`);
 
-    if (promptPwd) {
+    if (b('promptPwd')) {
       // Best-effort cleanup of plaintext conversion
       body.push(
         ``,
@@ -209,13 +288,19 @@
     return script;
   }
 
+  // ========= UI glue =========
   function updatePreview() {
+    // Run validation first to set button states and messages
+    validateAll();
+
     const script = buildScript();
-    const preview = document.getElementById('preview');
+    const preview = $('preview');
     preview.textContent = script;
-    const disabled = script.trim().length < 10;
-    document.getElementById('btnCopy').disabled = disabled;
-    document.getElementById('btnDownload').disabled = disabled;
+
+    // Keep buttons disabled if script is suspiciously short
+    const tooShort = script.trim().length < 10;
+    $('btnCopy').disabled = $('btnCopy').disabled || tooShort;
+    $('btnDownload').disabled = $('btnDownload').disabled || tooShort;
   }
 
   function downloadPs1() {
@@ -233,21 +318,29 @@
 
   async function copyToClipboard() {
     await navigator.clipboard.writeText(buildScript());
-    const btn = document.getElementById("btnCopy");
+    const btn = $("btnCopy");
     const prev = btn.textContent;
     btn.textContent = "Copied!";
     setTimeout(() => btn.textContent = prev, 1200);
   }
 
   // Wire up
-  document.getElementById('btnPreview').addEventListener('click', updatePreview);
-  document.getElementById('btnDownload').addEventListener('click', downloadPs1);
-  document.getElementById('btnCopy').addEventListener('click', copyToClipboard);
-  document.querySelectorAll('input').forEach(el => el.addEventListener('input', updatePreview));
+  $('btnPreview').addEventListener('click', updatePreview);
+  $('btnDownload').addEventListener('click', downloadPs1);
+  $('btnCopy').addEventListener('click', copyToClipboard);
+
+  // Real-time validation & live preview updates
+  document.querySelectorAll('input').forEach(el => {
+    el.addEventListener('input', e => {
+      if (e.target.matches('input[data-validate]')) {
+        validateField(e.target);
+      }
+      updatePreview();
+    });
+  });
 
   // Initial render
   updatePreview();
 </script>
 </body>
 </html>
-``
