@@ -48,6 +48,15 @@
       <div class="warning">
         <strong>Security note:</strong> You can avoid embedding passwords in the script. Enable
         <em>Prompt for password at runtime</em> to use <code>Read-Host -AsSecureString</code> and a temporary plain text conversion.
+        <div class="row" style="margin-top:0.25rem">
+  <label style="display:flex; align-items:center; gap:0.5rem; color:var(--fg);">
+    <input id="psuActive" type="checkbox" />
+    Make both PSUs active
+  </label>
+  <div class="hint" style="margin-left:2rem; max-width:72ch;">
+    <strong>Note:</strong> Some sites will have issues with power and will need to have both PSUs enabled providing power rather than the default of hot standby.
+  </div>
+</div>
       </div>
 
       <div class="grid" style="margin-top:0.75rem">
