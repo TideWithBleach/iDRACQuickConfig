@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>iDRAC RACADM PowerShell Script Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --bg:#0f172a; --fg:#e5e7eb; --muted:#94a3b8; --accent:#38bdf8; --panel:#0b1020; --border:#1f2937; --good:#22c55e; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--fg); }
+    header { padding:1rem 1.25rem; background:#111827; border-bottom:1px solid var(--border); position:sticky; top:0; z-index:1; }
+    h1 { margin:0; font-size:1.1rem; }
+    main { max-width:1100px; margin:0 auto; padding:1rem; display:grid; gap:1rem; }
+    .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; }
+    .card h2 { margin:0; padding:0.75rem 1rem; border-bottom:1px solid var(--border); font-size:1rem; color:var(--muted); }
+    .content { padding:1rem; }
+    .grid { display:grid; gap:0.75rem; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); }
+    label { display:grid; gap:0.35rem; font-size:0.9rem; color:var(--muted); }
+    input[type="text"], input[type="password"], select, textarea {
+      width:100%; background:#0a1222; color:var(--fg); border:1px solid var(--border);
+      border-radius:8px; padding:0.6rem 0.7rem; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .row { display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; }
+    .btnbar { display:flex; gap:0.5rem; flex-wrap:wrap; }
+    button { background:#0a1222; border:1px solid var(--border); border-radius:8px; color:var(--fg); padding:0.55rem 0.8rem; cursor:pointer; }
+    button.primary { background:var(--accent); color:#06131b; border-color:#0ea5e9; }
+    button.good { background:var(--good); color:#062612; border-color:#16a34a; }
+    pre { margin:0; white-space:pre; overflow:auto; max-height:520px; background:#071020; border:1px solid var(--border); border-radius:8px; padding:1rem; }
+    .hint { color:var(--muted); font-size:0.9rem; }
+    .pill { display:inline-block; background:#0a1222; border:1px solid var(--border); border-radius:999px; padding:0.2rem 0.5rem; margin-left:0.5rem; font-size:0.8rem; color:var(--muted); }
+    .warning { background:#1f2937; border-left:4px solid #f59e0b; padding:0.75rem; border-radius:6px; color:#fde68a; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>iDRAC RACADM PowerShell Script Generator <span class="pill">static · GitHub Pages‑friendly</span></h1>
+</header>
+
+<main>
+  <section class="card">
+    <h2>1) Inputs</h2>
+    <div class="content">
+      <div class="warning">
+        <strong>Security note:</strong> You can avoid embedding passwords in the script. Enable
+        <em>Prompt for password at runtime</em> to use <code>Read-Host -AsSecureString</code> and a temporary plain text conversion.
+      </div>
+
+      <div class="grid" style="margin-top:0.75rem">
+        <label>iDRAC authentication username (<code>$u</code>)
+          <input id="u" type="text" placeholder="e.g., root" value="root" />
+        </label>
+        <label>iDRAC authentication password (<code>$p</code>)
+          <input id="p" type="password" placeholder="e.g., calvin" value="calvin" />
+        </label>
+        <label>Temporary iDRAC connection IP (<code>$ip</code>)
+          <input id="ip" type="text" placeholder="e.g., 169.254.0.3" value="169.254.0.3" />
+        </label>
+        <label>Hostname (<code>$hostname</code>)
+          <input id="hostname" type="text" placeholder="e.g., USFLWDRE1ASHM01" value="USFLWDRE1ASHM01" />
+        </label>
+        <label>iDRAC static IP (<code>$idracip</code>)
+          <input id="idracip" type="text" placeholder="e.g., 10.184.52.51" value="10.184.52.51" />
+        </label>
+        <label>iDRAC gateway (<code>$idracgw</code>)
+          <input id="idracgw" type="text" placeholder="e.g., 10.184.52.1" value="10.184.52.1" />
+        </label>
+        <label>iDRAC netmask (<code>$idracmask</code>)
+          <input id="idracmask" type="text" placeholder="e.g., 255.255.255.0" value="255.255.255.0" />
+        </label>
+        <label>DNS1 (<code>$idracdns1</code>)
+          <input id="idracdns1" type="text" placeholder="e.g., 10.110.30.216" value="10.110.30.216" />
+        </label>
+        <label>DNS2 (<code>$idracdns2</code>)
+          <input id="idracdns2" type="text" placeholder="e.g., 10.110.93.254" value="10.110.93.254" />
+        </label>
+        <label>NTP1 (<code>$idracntp1</code>)
+          <input id="idracntp1" type="text" placeholder="e.g., 10.110.30.216" value="10.110.30.216" />
+        </label>
+        <label>NTP2 (<code>$idracntp2</code>)
+          <input id="idracntp2" type="text" placeholder="e.g., 10.110.93.254" value="10.110.93.254" />
+        </label>
+        <label>Timezone (<code>$timezone</code>)
+          <input id="timezone" type="text" placeholder="e.g., EST5EDT" value="EST5EDT" />
+        </label>
+      </div>
+
+      <div class="row">
+        <label style="display:flex; align-items:center; gap:0.5rem; color:var(--fg);">
+          <input id="promptPwd" type="checkbox" />
+          Prompt for password at runtime (recommended)
+        </label>
+      </div>
+
+      <div class="btnbar" style="margin-top:0.75rem">
+        <button class="primary" id="btnPreview">Preview</button>
+        <button id="btnCopy" disabled>Copy</button>
+        <button class="good" id="btnDownload" disabled>Download .ps1</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>2) Preview</h2>
+    <div class="content">
+      <pre id="preview"></pre>
+      <p class="hint">This builds a PowerShell script that uses <code>racadm --nocertwarn</code> with your inputs and applies iDRAC settings.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+  // Utilities
+  const CRLF = s => s.replace(/\r?\n/g, "\r\n");
+  const psq = s => `'${String(s ?? "").replace(/'/g, "''")}'`; // PowerShell single-quote safe
+
+  function v(id) { return document.getElementById(id).value.trim(); }
+  function b(id) { return document.getElementById(id).checked; }
+
+  function buildScript() {
+    const u = v('u');
+    const p = v('p');
+    const ip = v('ip');
+    const hostname = v('hostname');
+    const idracip = v('idracip');
+    const idracgw = v('idracgw');
+    const idracmask = v('idracmask');
+    const idracdns1 = v('idracdns1');
+    const idracdns2 = v('idracdns2');
+    const idracntp1 = v('idracntp1');
+    const idracntp2 = v('idracntp2');
+    const timezone = v('timezone');
+    const promptPwd = b('promptPwd');
+
+    const header = [
+      "# ================================================",
+      "# Generated iDRAC RACADM configuration script",
+      `# Generated: ${new Date().toISOString()}`,
+      "# ================================================",
+      "$ErrorActionPreference = 'Stop'",
+      "Set-StrictMode -Version Latest",
+      ""
+    ];
+
+    // Build credentials section
+    const credLines = [];
+    credLines.push(`$u = ${psq(u || 'root')}`);
+    if (promptPwd) {
+      credLines.push(
+        `$secureP = Read-Host "Enter iDRAC password for $u" -AsSecureString`,
+        // Convert to plain text just-in-time for racadm (racadm needs clear text; dispose immediately after use)
+        `$p = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureP))`
+      );
+    } else {
+      credLines.push(`$p = ${psq(p || 'calvin')}`);
+    }
+    credLines.push(`$ip = ${psq(ip || '169.254.0.3')}`);
+    credLines.push(`$hostname = ${psq(hostname || 'idrac-host')}`);
+    credLines.push(`$idracip = ${psq(idracip || '')}`);
+    credLines.push(`$idracgw = ${psq(idracgw || '')}`);
+    credLines.push(`$idracmask = ${psq(idracmask || '')}`);
+    credLines.push(`$idracdns1 = ${psq(idracdns1 || '')}`);
+    credLines.push(`$idracdns2 = ${psq(idracdns2 || '')}`);
+    credLines.push(`$idracntp1 = ${psq(idracntp1 || '')}`);
+    credLines.push(`$idracntp2 = ${psq(idracntp2 || '')}`);
+    credLines.push(`$timezone = ${psq(timezone || 'EST5EDT')}`);
+    credLines.push("");
+
+    // Command helper
+    const body = [];
+    body.push(`# Disable default credential warning`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.Tuning.DefaultCredentialWarning 0`);
+
+    body.push(`# Disable DHCP and enable IPv4`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ipv4.dhcpenable 0`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ipv4.enable enable`);
+
+    body.push(`# Apply IPv4 settings`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ipv4.gateway $idracgw`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ipv4.address $idracip`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ipv4.netmask $idracmask`);
+
+    body.push(`# Enable IPMI over LAN`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ipmilan.enable enabled`);
+
+    body.push(`# Set DNS host name and DNS servers`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.nic.dnsracname $hostname`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ipv4.DNS1 $idracdns1`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ipv4.DNS2 $idracdns2`);
+
+    body.push(`# Timezone and NTP`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.time.timezone $timezone`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ntpconfiggroup.ntp1 $idracntp1`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ntpconfiggroup.ntp2 $idracntp2`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ntpconfiggroup.ntpenable 1`);
+
+    body.push(`# Show final IPv4 config`);
+    body.push(`racadm --nocertwarn -r $ip -u $u -p $p get idrac.ipv4`);
+
+    if (promptPwd) {
+      // Best-effort cleanup of plaintext conversion
+      body.push(
+        ``,
+        `# Cleanup plaintext password variable`,
+        `Remove-Variable -Name p -ErrorAction SilentlyContinue`
+      );
+    }
+
+    const script = [...header, ...credLines, ...body, ""].join("\n");
+    return script;
+  }
+
+  function updatePreview() {
+    const script = buildScript();
+    const preview = document.getElementById('preview');
+    preview.textContent = script;
+    const disabled = script.trim().length < 10;
+    document.getElementById('btnCopy').disabled = disabled;
+    document.getElementById('btnDownload').disabled = disabled;
+  }
+
+  function downloadPs1() {
+    const content = CRLF(buildScript());
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "idrac-racadm-config.ps1";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function copyToClipboard() {
+    await navigator.clipboard.writeText(buildScript());
+    const btn = document.getElementById("btnCopy");
+    const prev = btn.textContent;
+    btn.textContent = "Copied!";
+    setTimeout(() => btn.textContent = prev, 1200);
+  }
+
+  // Wire up
+  document.getElementById('btnPreview').addEventListener('click', updatePreview);
+  document.getElementById('btnDownload').addEventListener('click', downloadPs1);
+  document.getElementById('btnCopy').addEventListener('click', copyToClipboard);
+  document.querySelectorAll('input').forEach(el => el.addEventListener('input', updatePreview));
+
+  // Initial render
+  updatePreview();
+</script>
+</body>
+</html>
+``
