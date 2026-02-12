@@ -28,19 +28,11 @@
     pre { margin:0; white-space:pre; overflow:auto; max-height:520px; background:#071020; border:1px solid var(--border); border-radius:8px; padding:1rem; }
     .hint { color:var(--muted); font-size:0.9rem; }
     .pill { display:inline-block; background:#0a1222; border:1px solid var(--border); border-radius:999px; padding:0.2rem 0.5rem; margin-left:0.5rem; font-size:0.8rem; color:var(--muted); }
-    .warning { background:#1f2937; border-left:4px solid #f59e0b; padding:0.75rem; border-radius:6px; color:#fde68a; }
 
     /* === Validation UI === */
     .error { color:#fca5a5; font-size:0.85rem; display:none; }
     input.invalid, select.invalid { border-color:#f87171; box-shadow:0 0 0 1px #f87171 inset; }
     .error.show { display:block; }
-
-    /* === Summary === */
-    .summary-title { margin:0 0 .5rem 0; color:var(--muted); font-size:0.95rem; }
-    .summary-list { list-style:none; padding-left:0; margin:0 0 1rem 0;
-      display:grid; gap:.5rem; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
-    .summary-list li { background:#0a1222; border:1px solid var(--border); border-radius:8px; padding:.5rem .6rem; color:var(--fg); }
-    .summary-list code { color:var(--fg); }
   </style>
 </head>
 <body>
@@ -52,12 +44,11 @@
   <section class="card">
     <h2>1) Inputs</h2>
     <div class="content">
-      <div class="warning">
-        <strong>Security note:</strong> You can avoid embedding passwords in the script. Enable
-        <em>Prompt for password at runtime</em> to use <code>Read-Host -AsSecureString</code> and a temporary plain text conversion.
+      <div class="hint" style="margin-bottom:.75rem">
+        <strong>Security note:</strong> Enable <em>Prompt for password at runtime</em> to avoid embedding passwords.
       </div>
 
-      <div class="grid" style="margin-top:0.75rem">
+      <div class="grid">
         <label>iDRAC authentication username
           <input id="u" type="text" placeholder="e.g., root" value="root" />
           <span class="error" id="err-u"></span>
@@ -93,9 +84,7 @@
 
         <!-- DNS2 (optional) -->
         <label>DNS2
-          <input id="idracdns2" type="text" placeholder="e.g., 10.110.93.254"
-                 value=""
-                 data-validate="ipv4" data-optional="true" />
+          <input id="idracdns2" type="text" placeholder="e.g., 10.110.93.254" value="" data-validate="ipv4" data-optional="true" />
           <span class="error" id="err-idracdns2">Enter a valid IPv4 DNS server (or leave blank).</span>
         </label>
 
@@ -106,9 +95,7 @@
 
         <!-- NTP2 (optional) -->
         <label>NTP2
-          <input id="idracntp2" type="text" placeholder="e.g., 10.110.93.254"
-                 value=""
-                 data-validate="ipv4" data-optional="true" />
+          <input id="idracntp2" type="text" placeholder="e.g., 10.110.93.254" value="" data-validate="ipv4" data-optional="true" />
           <span class="error" id="err-idracntp2">Enter a valid IPv4 NTP server (or leave blank).</span>
         </label>
 
@@ -160,9 +147,6 @@
   <section class="card">
     <h2>2) Preview</h2>
     <div class="content">
-      <h3 class="summary-title">Summary of selected options</h3>
-      <ul id="summaryList" class="summary-list"></ul>
-
       <pre id="preview"></pre>
       <p class="hint">This builds a PowerShell script that uses <code>racadm --nocertwarn</code> with your inputs and applies iDRAC settings.</p>
     </div>
@@ -176,7 +160,6 @@
   const $ = id => document.getElementById(id);
   const v = id => $(id).value.trim();
   const b = id => $(id).checked;
-  const esc = s => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
   // ========= Validation =========
   const IPV4_RE =
@@ -218,6 +201,7 @@
 
   function validateField(input) {
     const type = input.dataset.validate;
+    theOptional = input.dataset.optional === "true";
     const optional = input.dataset.optional === "true";
     const value = input.value.trim();
     let valid = true;
@@ -388,45 +372,11 @@
     return [...header, ...credLines, ...body, ""].join("\n");
   }
 
-  // ========= Summary builder =========
-  function buildSummary() {
-    const ip = v('ip');
-    const hostname = v('hostname');
-    const idracip = v('idracip');
-    const idracgw = v('idracgw');
-    const idracmask = v('idracmask');
-    const idracdns1 = v('idracdns1');
-    const idracdns2 = v('idracdns2').trim();
-    const idracntp1 = v('idracntp1');
-    const idracntp2 = v('idracntp2').trim();
-    const tz = currentTimezoneValue();
-    const pwdMode = b('promptPwd') ? 'Prompt at runtime' : 'Embedded in script (not recommended)';
-    const psuMode = b('psuActive') ? 'Both PSUs active' : 'Default hot standby';
-
-    const items = [
-      `<li><strong>Temp iDRAC IP:</strong> <code>${esc(ip)}</code></li>`,
-      `<li><strong>Hostname:</strong> <code>${esc(hostname)}</code></li>`,
-      `<li><strong>Static IP:</strong> <code>${esc(idracip)}</code></li>`,
-      `<li><strong>Gateway:</strong> <code>${esc(idracgw)}</code></li>`,
-      `<li><strong>Netmask:</strong> <code>${esc(idracmask)}</code></li>`,
-      `<li><strong>DNS1:</strong> <code>${esc(idracdns1)}</code></li>`,
-      `<li><strong>NTP1:</strong> <code>${esc(idracntp1)}</code></li>`,
-      `<li><strong>Timezone:</strong> <code>${esc(tz)}</code></li>`,
-      `<li><strong>Password handling:</strong> ${esc(pwdMode)}</li>`,
-      `<li><strong>PSU mode:</strong> ${esc(psuMode)}</li>`
-    ];
-    if (idracdns2) items.splice(6, 0, `<li><strong>DNS2:</strong> <code>${esc(idracdns2)}</code></li>`);
-    if (idracntp2) items.splice(8, 0, `<li><strong>NTP2:</strong> <code>${esc(idracntp2)}</code></li>`);
-
-    $("summaryList").innerHTML = items.join("");
-  }
-
   // ========= UI glue =========
   function updatePreview() {
     validateAll();
     const script = buildScript();
     $("preview").textContent = script;
-    buildSummary();
 
     const tooShort = script.trim().length < 10;
     $("btnCopy").disabled = $("btnCopy").disabled || tooShort;
@@ -465,7 +415,7 @@
       if (e.target.matches('input[data-validate]')) validateField(e.target);
       updatePreview();
     });
-    el.addEventListener("change", updatePreview); // ensure checkboxes trigger preview/summary
+    el.addEventListener("change", updatePreview); // checkboxes included
   });
   document.querySelectorAll("select").forEach(el => {
     el.addEventListener("change", e => {
