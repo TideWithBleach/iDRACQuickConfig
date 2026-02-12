@@ -255,10 +255,6 @@
   }
 
   // ========= Script builder =========
-  function currentTimezoneValue() {
-    const sel = $("timezoneSelect").value;
-    return sel === "Other" ? v("timezoneCustom") || "EST5EDT" : sel;
-  }
 
   function buildScript() {
     const u = v('u');
@@ -269,10 +265,10 @@
     const idracgw = v('idracgw');
     const idracmask = v('idracmask');
     const idracdns1 = v('idracdns1');
-    const idracdns2 = v('idracdns2');
+    const idracdns2 = v('idracdns2'); // optional
     const idracntp1 = v('idracntp1');
-    const idracntp2 = v('idracntp2');
-    const timezone = currentTimezoneValue();
+    const idracntp2 = v('idracntp2'); // optional
+    const timezone = typeof currentTimezoneValue === 'function' ? currentTimezoneValue() : v('timezone');
     const promptPwd = b('promptPwd');
 
     const header = [
@@ -285,6 +281,7 @@
       ""
     ];
 
+    // Build variables (omit DNS2/NTP2 variable lines when blank)
     const credLines = [];
     credLines.push(`$u = ${psq(u || 'root')}`);
     if (promptPwd) {
@@ -301,12 +298,13 @@
     credLines.push(`$idracgw = ${psq(idracgw || '')}`);
     credLines.push(`$idracmask = ${psq(idracmask || '')}`);
     credLines.push(`$idracdns1 = ${psq(idracdns1 || '')}`);
-    credLines.push(`$idracdns2 = ${psq(idracdns2 || '')}`);
+    if (idracdns2) credLines.push(`$idracdns2 = ${psq(idracdns2)}`);   // only when provided
     credLines.push(`$idracntp1 = ${psq(idracntp1 || '')}`);
-    credLines.push(`$idracntp2 = ${psq(idracntp2 || '')}`);
+    if (idracntp2) credLines.push(`$idracntp2 = ${psq(idracntp2)}`);   // only when provided
     credLines.push(`$timezone = ${psq(timezone || 'EST5EDT')}`);
     credLines.push("");
 
+    // racadm commands (omit DNS2/NTP2 when blank)
     const body = [];
     body.push(`# Disable default credential warning`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.Tuning.DefaultCredentialWarning 0`);
@@ -326,19 +324,27 @@
     body.push(`# Set DNS host name and DNS servers`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.nic.dnsracname $hostname`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ipv4.DNS1 $idracdns1`);
-    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ipv4.DNS2 $idracdns2`);
+    if (idracdns2) {
+      body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ipv4.DNS2 $idracdns2`);
+    }
 
     body.push(`# Timezone and NTP`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.time.timezone $timezone`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ntpconfiggroup.ntp1 $idracntp1`);
-    body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ntpconfiggroup.ntp2 $idracntp2`);
+    if (idracntp2) {
+      body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ntpconfiggroup.ntp2 $idracntp2`);
+    }
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ntpconfiggroup.ntpenable 1`);
 
     body.push(`# Show final IPv4 config`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p get idrac.ipv4`);
 
     if (promptPwd) {
-      body.push(``, `# Cleanup plaintext password variable`, `Remove-Variable -Name p -ErrorAction SilentlyContinue`);
+      body.push(
+        ``,
+        `# Cleanup plaintext password variable`,
+        `Remove-Variable -Name p -ErrorAction SilentlyContinue`
+      );
     }
 
     return [...header, ...credLines, ...body, ""].join("\n");
