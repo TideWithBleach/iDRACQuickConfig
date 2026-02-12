@@ -48,15 +48,6 @@
       <div class="warning">
         <strong>Security note:</strong> You can avoid embedding passwords in the script. Enable
         <em>Prompt for password at runtime</em> to use <code>Read-Host -AsSecureString</code> and a temporary plain text conversion.
-        <div class="row" style="margin-top:0.25rem">
-  <label style="display:flex; align-items:center; gap:0.5rem; color:var(--fg);">
-    <input id="psuActive" type="checkbox" />
-    Make both PSUs active
-  </label>
-  <div class="hint" style="margin-left:2rem; max-width:72ch;">
-    <strong>Note:</strong> Some sites will have issues with power and will need to have both PSUs enabled providing power rather than the default of hot standby.
-  </div>
-</div>
       </div>
 
       <div class="grid" style="margin-top:0.75rem">
@@ -130,11 +121,22 @@
         </label>
       </div>
 
-      <div class="row">
+      <div class="row" style="margin-top:0.5rem">
         <label style="display:flex; align-items:center; gap:0.5rem; color:var(--fg);">
           <input id="promptPwd" type="checkbox" />
           Prompt for password at runtime (recommended)
         </label>
+      </div>
+
+      <!-- PSU Active option -->
+      <div class="row" style="margin-top:0.25rem">
+        <label style="display:flex; align-items:center; gap:0.5rem; color:var(--fg);">
+          <input id="psuActive" type="checkbox" />
+          Make both PSUs active
+        </label>
+        <div class="hint" style="margin-left:2rem; max-width:72ch;">
+          <strong>Note:</strong> Some sites will have issues with power and will need to have both PSUs enabled providing power rather than the default of hot standby.
+        </div>
       </div>
 
       <div class="btnbar" style="margin-top:0.75rem">
@@ -189,7 +191,7 @@
     const labels = name.split(".");
     for (const label of labels) {
       if (label.length < 1 || label.length > 63) return false;
-      // must start/end alphanumeric; hyphens allowed inside
+      // must start with alnum, may contain hyphens, must end with alnum
       if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/.test(label)) return false;
     }
     return true;
@@ -357,6 +359,14 @@
     }
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ntpconfiggroup.ntpenable 1`);
 
+    // PSU Active option
+    if (b('psuActive')) {
+      body.push(`# Make both PSUs active`);
+      body.push(`# Some sites require both PSUs providing power instead of hot standby`);
+      body.push(`racadm --nocertwarn -r $ip -u $u -p $p set system.serverpwr.PSRedPolicy 0`);
+      body.push(`racadm --nocertwarn -r $ip -u $u -p $p set system.serverpwr.PSRapidOn Disabled`);
+    }
+
     body.push(`# Show final IPv4 config`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p get idrac.ipv4`);
 
@@ -414,6 +424,7 @@
       if (e.target.matches('input[data-validate]')) validateField(e.target);
       updatePreview();
     });
+    el.addEventListener("change", updatePreview); // ensure checkboxes trigger preview
   });
   document.querySelectorAll("select").forEach(el => {
     el.addEventListener("change", e => {
