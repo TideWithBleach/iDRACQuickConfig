@@ -84,27 +84,26 @@
           <span class="error" id="err-idracdns1">Enter a valid IPv4 DNS server.</span>
         </label>
 
-<!-- DNS2 (optional) -->
-<label>DNS2
-  <input id="idracdns2" type="text" placeholder="e.g., 10.110.93.254"
-         value=""
-         data-validate="ipv4" data-optional="true" />
-  <span class="error" id="err-idracdns2">Enter a valid IPv4 DNS server (or leave blank).</span>
-</label>
+        <!-- DNS2 (optional) -->
+        <label>DNS2
+          <input id="idracdns2" type="text" placeholder="e.g., 10.110.93.254"
+                 value=""
+                 data-validate="ipv4" data-optional="true" />
+          <span class="error" id="err-idracdns2">Enter a valid IPv4 DNS server (or leave blank).</span>
+        </label>
 
         <label>NTP1
           <input id="idracntp1" type="text" placeholder="e.g., 10.110.30.216" value="10.110.30.216" data-validate="ipv4" />
           <span class="error" id="err-idracntp1">Enter a valid IPv4 NTP server.</span>
         </label>
 
-<!-- NTP2 (optional) -->
-<label>NTP2
-  <input id="idracntp2" type="text" placeholder="e.g., 10.110.93.254"
-         value=""
-         data-validate="ipv4" data-optional="true" />
-  <span class="error" id="err-idracntp2">Enter a valid IPv4 NTP server (or leave blank).</span>
-</label>
-
+        <!-- NTP2 (optional) -->
+        <label>NTP2
+          <input id="idracntp2" type="text" placeholder="e.g., 10.110.93.254"
+                 value=""
+                 data-validate="ipv4" data-optional="true" />
+          <span class="error" id="err-idracntp2">Enter a valid IPv4 NTP server (or leave blank).</span>
+        </label>
 
         <label>Timezone
           <select id="timezoneSelect" data-validate="timezone">
@@ -254,8 +253,17 @@
     return allValid;
   }
 
-  // ========= Script builder =========
+  // ========= Timezone helper =========
+  function currentTimezoneValue() {
+    const sel = $("timezoneSelect").value;
+    if (sel === "Other") {
+      const custom = v("timezoneCustom");
+      return custom || "EST5EDT";
+    }
+    return sel;
+  }
 
+  // ========= Script builder =========
   function buildScript() {
     const u = v('u');
     const p = v('p');
@@ -265,11 +273,15 @@
     const idracgw = v('idracgw');
     const idracmask = v('idracmask');
     const idracdns1 = v('idracdns1');
-    const idracdns2 = v('idracdns2'); // optional
+    const idracdns2Raw = v('idracdns2'); // optional
     const idracntp1 = v('idracntp1');
-    const idracntp2 = v('idracntp2'); // optional
-    const timezone = typeof currentTimezoneValue === 'function' ? currentTimezoneValue() : v('timezone');
+    const idracntp2Raw = v('idracntp2'); // optional
+    const timezone = currentTimezoneValue();
     const promptPwd = b('promptPwd');
+
+    // Defensive normalization for optional fields
+    const idracdns2 = idracdns2Raw.trim();
+    const idracntp2 = idracntp2Raw.trim();
 
     const header = [
       "# ================================================",
@@ -298,9 +310,9 @@
     credLines.push(`$idracgw = ${psq(idracgw || '')}`);
     credLines.push(`$idracmask = ${psq(idracmask || '')}`);
     credLines.push(`$idracdns1 = ${psq(idracdns1 || '')}`);
-    if (idracdns2) credLines.push(`$idracdns2 = ${psq(idracdns2)}`);   // only when provided
+    if (idracdns2 && isValidIPv4(idracdns2)) credLines.push(`$idracdns2 = ${psq(idracdns2)}`);   // only when provided & valid
     credLines.push(`$idracntp1 = ${psq(idracntp1 || '')}`);
-    if (idracntp2) credLines.push(`$idracntp2 = ${psq(idracntp2)}`);   // only when provided
+    if (idracntp2 && isValidIPv4(idracntp2)) credLines.push(`$idracntp2 = ${psq(idracntp2)}`);   // only when provided & valid
     credLines.push(`$timezone = ${psq(timezone || 'EST5EDT')}`);
     credLines.push("");
 
@@ -324,14 +336,14 @@
     body.push(`# Set DNS host name and DNS servers`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.nic.dnsracname $hostname`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ipv4.DNS1 $idracdns1`);
-    if (idracdns2) {
+    if (idracdns2 && isValidIPv4(idracdns2)) {
       body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ipv4.DNS2 $idracdns2`);
     }
 
     body.push(`# Timezone and NTP`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.time.timezone $timezone`);
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ntpconfiggroup.ntp1 $idracntp1`);
-    if (idracntp2) {
+    if (idracntp2 && isValidIPv4(idracntp2)) {
       body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ntpconfiggroup.ntp2 $idracntp2`);
     }
     body.push(`racadm --nocertwarn -r $ip -u $u -p $p set idrac.ntpconfiggroup.ntpenable 1`);
